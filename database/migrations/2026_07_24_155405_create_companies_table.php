@@ -11,10 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('job_applications', function (Blueprint $table) {
+        Schema::create('companies', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id');
-            $table->unsignedBigInteger('post_id');
+            $table->unsignedBigInteger('company_category_id');
+            $table->string('logo');
+            $table->string('title', 50);
+            $table->text('description');
+            $table->string('website');
+            $table->string('cover_img');
             $table->timestamps();
 
             $table->foreign('user_id')
@@ -23,9 +28,9 @@ return new class extends Migration
                 ->cascadeOnDelete()
                 ->cascadeOnUpdate();
 
-            $table->foreign('post_id')
+            $table->foreign('company_category_id')
                 ->references('id')
-                ->on('posts')
+                ->on('company_categories')
                 ->cascadeOnDelete()
                 ->cascadeOnUpdate();
         });
@@ -36,11 +41,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('job_applications', function (Blueprint $table) {
+        Schema::table('companies', function (Blueprint $table) {
             $table->dropForeign(['user_id']);
-            $table->dropForeign(['post_id']);
+            $table->dropForeign(['company_category_id']);
         });
-
-        Schema::dropIfExists('job_applications');
+        Schema::dropIfExists('companies');
     }
 };
