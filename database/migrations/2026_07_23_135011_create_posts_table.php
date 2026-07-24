@@ -27,6 +27,13 @@ return new class extends Migration
             $table->text('specifications');
             $table->unsignedMediumInteger('views')->default(1);
             $table->timestamps();
+
+            $table->foreign('company_id')
+                ->references('id')
+                ->on('companies')
+                ->cascadeOnDelete()
+                ->cascadeOnUpdate();
+
         });
     }
 
@@ -35,6 +42,9 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::table('posts', function (Blueprint $table) {
+            $table->dropForeign(['company_id']);
+        });
         Schema::dropIfExists('posts');
     }
 };

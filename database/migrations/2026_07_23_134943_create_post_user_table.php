@@ -15,6 +15,18 @@ return new class extends Migration
             $table->integer('post_id');
             $table->integer('user_id');
             $table->primary(['post_id', 'user_id']);
+
+            $table->foreign('post_id')
+                ->references('id')
+                ->on('posts')
+                ->cascadeOnUpdate()
+                ->cascadeOnDelete();
+
+            $table->foreign('user_id')
+                ->references('id')
+                ->on('users')
+                ->cascadeOnUpdate()
+                ->cascadeOnDelete();
         });
     }
 
@@ -23,6 +35,11 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::table('post_user', function (Blueprint $table) {
+            $table->dropForeign(['post_id']);
+            $table->dropForeign(['user_id']);
+        });
+        
         Schema::dropIfExists('post_user');
     }
 };

@@ -21,6 +21,18 @@ return new class extends Migration
             $table->string('website');
             $table->string('cover_img');
             $table->timestamps();
+
+            $table->foreign('user_id')
+                ->references('id')
+                ->on('users')
+                ->cascadeOnDelete()
+                ->cascadeOnUpdate();
+
+            $table->foreign('company_category_id')
+                ->references('id')
+                ->on('company_categories')
+                ->cascadeOnDelete()
+                ->cascadeOnUpdate();
         });
     }
 
@@ -29,6 +41,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::table('companies', function (Blueprint $table) {
+            $table->dropForeign(['user_id']);
+            $table->dropForeign(['company_category_id']);
+        });
         Schema::dropIfExists('companies');
     }
 };
