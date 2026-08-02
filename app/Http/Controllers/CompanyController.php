@@ -1,134 +1,131 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use App\Models\Company;
 use App\Models\CompanyCategory;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
-use RealRashid\Support\Facades\Storage;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use RealRashid\SweetAlert\Facades\Alert;
 
-
-
 class CompanyController extends Controller
 {
-   
+    /**
+     * Afficher le formulaire de création d'une entreprise.
+     */
+    public function create(): View|RedirectResponse
+    {
+        if (auth()->user()->company) {
+            Alert::toast('Vous avez déjà une entreprise !', 'info');
+            return redirect()->route('company.edit');
+        }
 
+        $categories = CompanyCategory::all();
 
-public function create (): view|RedirectResponse 
-   {
-
-    if (auth()->user()->company){
-        Alert::toast('Vous avez déjà une entreprise!', 'info');
-        return redirect()->route('company.edit');
+        return view('company.create', compact('categories'));
     }
 
-    $categories = CompanyCategory::all();
+    /**
+     * Enregistrer une nouvelle entreprise.
+     */
+    public function store(Request $request): RedirectResponse
+    {
+        $this->validateCompany($request);
 
-    return view('company.create', compact('categories'));
-   }
+        $company = new Company();
 
+        if ($this->companySave($company, $request)) {
+            Alert::toast('Entreprise créée ! Vous pouvez désormais ajouter des publications.', 'success');
+        } else {
+            Alert::toast('Échec de la création de l\'entreprise.', 'error');
+        }
 
-
-
-
-
-
-
-
-   public function store (Request $request): RedirectResponse 
-   {
-
-    $this->validateCompany($request);
-
-    $company = new company () ;
-
-    if ($this->companySave($company , $request)){
-        Alert::toast('Entreprise créée ! Vous pouvez désormais ajouter des publications.', 'success');
-    } else {
-       Alert::toast('Echoué!' , 'Erreur');
-    }
-    
-    return redirect()->route('account.authorSection');
-
-   }
-
-
-
-
-
-   public function edit():View {
-
-    $company = auth()->user()->company;
-    $categories = CompanyCategories::all();
-
-    return view('company.edit' , compact('company', 'categories'));
-
-   }
-
-
-   public function update(Request $request, Company $company):RedirectResponse 
-   {
-    $this->validateCompanyUpdate($request);
-
-    $company = auth()->user()->company;
-    
-    if ($this->companyUpdate($company, $request)){
-        Alert::toast('Entreprise mise à jour avec succès ! ', 'succès ');
-    } else {
-        Alert::toast('Echoué!' , 'Erreur');
+        return redirect()->route('account.authorSection');
     }
 
-    return redirect()->route('account.authorSection');
-   }
+    /**
+     * Afficher le formulaire de modification.
+     */
+    public function edit(): View|RedirectResponse
+    {
+        $company = auth()->user()->company;
 
+        if (!$company) {
+            return redirect()->route('company.create');
+        }
 
+        $categories = CompanyCategory::all();
 
+        return view('company.edit', compact('company', 'categories'));
+    }
 
-   protected function validateCompany(Request $request): array 
-   {
-     return $request->validate([
-        'title'=>['required', 'string' , 'min:5'], 
-        'description' => ['required', 'string', 'min:5'],
-        'logo'=>['required', 'image', 'max:3000'],
-        'category'=>['required'],
-        'website'=>['required', 'string'],
-        'cover_img'=> ['nullable', 'image' , 'max:4000'],
-    ]);
-   }
+    /**
+     * Mettre à jour une entreprise.
+     */
+    public function update(Request $request): RedirectResponse
+    {
+        $this->validateCompanyUpdate($request);
 
+        $company = auth()->user()->company;
 
+        if ($this->companyUpdate($company, $request)) {
+            Alert::toast('Entreprise mise à jour avec succès !', 'success');
+        } else {
+            Alert::toast('Échec de la mise à jour.', 'error');
+        }
 
+        return redirect()->route('account.authorSection');
+    }
 
-   public function validateCompanyUpdate (Request $request): array
-   {
-    return $request->validate([
-            'title' => ['required', 'string', 'min:5'],
+    /**
+     * Validation lors de la création.
+     */
+    protected function validateCompany(Request $request): array
+    {
+        return $request->validate([
+            'title'       => ['required', 'string', 'min:5'],
             'description' => ['required', 'string', 'min:5'],
-            'logo' => ['nullable', 'image', 'max:3000'],
-            'category' => ['required'],
-            'website' => ['required', 'string'],
-            'cover_img' => ['nullable', 'image', 'max:4000'],
+            'logo'        => ['required', 'image', 'max:3000'],
+            'category'    => ['required'],
+            'website'     => ['required', 'string'],
+            'cover_img'   => ['nullable', 'image', 'max:4000'],
         ]);
-   }
+    }
 
+    /**
+     * Validation lors de la mise à jour.
+     */
+    protected function validateCompanyUpdate(Request $request): array
+    {
+        return $request->validate([
+            'title'       => ['required', 'string', 'min:5'],
+            'description' => ['required', 'string', 'min:5'],
+            'logo'        => ['nullable', 'image', 'max:3000'],
+            'category'    => ['required'],
+            'website'     => ['required', 'string'],
+            'cover_img'   => ['nullable', 'image', 'max:4000'],
+        ]);
+    }
 
-
-   protected function companySave(Company $company , Request $request) : bool 
-   {
+    /**
+     * Sauvegarder une nouvelle entreprise.
+     */
+    protected function companySave(Company $company, Request $request): bool
+    {
         $company->user_id = auth()->id();
         $company->title = $request->title;
         $company->description = $request->description;
         $company->company_category_id = $request->category;
         $company->website = $request->website;
 
-         // Logo
+        // Logo
         $logoName = $this->getFileName($request->file('logo'));
         $request->file('logo')->storeAs('public/companies/logos', $logoName);
         $company->logo = 'storage/companies/logos/' . $logoName;
 
-            // Image de couverture
+        // Image de couverture
         if ($request->hasFile('cover_img')) {
             $coverName = $this->getFileName($request->file('cover_img'));
             $request->file('cover_img')->storeAs('public/companies/cover', $coverName);
@@ -138,21 +135,25 @@ public function create (): view|RedirectResponse
         }
 
         return $company->save();
-   }
+    }
 
-
-
-
-   protected function companyUpdate (Company $company, Request $request): bool
-   {
+    /**
+     * Mettre à jour une entreprise.
+     */
+    protected function companyUpdate(Company $company, Request $request): bool
+    {
         $company->title = $request->title;
         $company->description = $request->description;
         $company->company_category_id = $request->category;
         $company->website = $request->website;
-        
-         if ($request->hasFile('logo')) {
 
-            if ($company->logo && Storage::exists('public/companies/logos/' . basename($company->logo))) {
+        // Mise à jour du logo
+        if ($request->hasFile('logo')) {
+
+            if (
+                $company->logo &&
+                Storage::exists('public/companies/logos/' . basename($company->logo))
+            ) {
                 Storage::delete('public/companies/logos/' . basename($company->logo));
             }
 
@@ -161,7 +162,8 @@ public function create (): view|RedirectResponse
 
             $company->logo = 'storage/companies/logos/' . $logoName;
         }
-        
+
+        // Mise à jour de l'image de couverture
         if ($request->hasFile('cover_img')) {
 
             if (
@@ -179,12 +181,12 @@ public function create (): view|RedirectResponse
         }
 
         return $company->save();
+    }
 
-   }
-
-   
-
-   protected function getFileName($file): string
+    /**
+     * Générer un nom unique pour un fichier.
+     */
+    protected function getFileName($file): string
     {
         $fileName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
         $extension = $file->getClientOriginalExtension();
@@ -192,9 +194,9 @@ public function create (): view|RedirectResponse
         return $fileName . '_' . time() . '.' . $extension;
     }
 
-
-
-
+    /**
+     * Supprimer une entreprise.
+     */
     public function destroy(): RedirectResponse
     {
         $company = auth()->user()->company;
@@ -203,19 +205,25 @@ public function create (): view|RedirectResponse
             return redirect()->route('account.authorSection');
         }
 
-        if ($company->logo) {
+        if (
+            $company->logo &&
+            Storage::exists('public/companies/logos/' . basename($company->logo))
+        ) {
             Storage::delete('public/companies/logos/' . basename($company->logo));
         }
 
-        if ($company->cover_img && $company->cover_img !== 'nocover') {
+        if (
+            $company->cover_img &&
+            $company->cover_img !== 'nocover' &&
+            Storage::exists('public/companies/cover/' . basename($company->cover_img))
+        ) {
             Storage::delete('public/companies/cover/' . basename($company->cover_img));
         }
 
         $company->delete();
 
-        Alert::toast('Entreprise supprimée avec succès !', 'succès');
+        Alert::toast('Entreprise supprimée avec succès !', 'success');
 
         return redirect()->route('account.authorSection');
     }
-   
 }
