@@ -53,7 +53,7 @@ Route::middleware('auth')->prefix('account')->group(function(){
     });
 
     //Author Role Routes
-    Route::group(['middleware' => ['']], function(){
+    Route::group(['middleware' => ['role:user']], function(){
         Route::get('author-section', [AuthorController::class, 'authorSection'])->name('account.authorSection');
 
         Route::get('job-application/{id}', [JobApplicationController::class, 'show'])->name('jobApplication.show');
